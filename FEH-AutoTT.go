@@ -12,19 +12,19 @@ var (
 	port = flag.Int("p", adb.AdbPort, "")
 
 	cli         *adb.Adb
-	run_cost    = 15
-	new_points  = 441
+	runCost    = 15
+	newPoints  = 441
 	battleTimer = 90
 
-	threshold_max = 50000
-	threshold_3 = 10000
-	threshold_2 = 6000
-	threshold_1 = 3000
+	thresholdMax = 50000
+	threshold3 = 10000
+	threshold2 = 6000
+	threshold1 = 3000
 
-	next_reward_max = 1250
-	next_reward_3 = 1000
-	next_reward_2 = 500
-	next_reward_1 = 250
+	nextRewardMax = 1250
+	nextReward3 = 1000
+	nextReward2 = 500
+	nextReward1 = 250
 
 	sealRewards = []int{6000, 10000, 20000}
 	characterRewards = []int{1000, 15000}
@@ -70,45 +70,45 @@ func main() {
 	var score int
 	fmt.Scanln(&score)
 	fmt.Print("Enter the point value of the next reward to unlock- ")
-	var next_reward int
-	fmt.Scanln(&next_reward)
+	var nextReward int
+	fmt.Scanln(&nextReward)
 	fmt.Print("Enter the difficulty, 4 or 5- ")
 	var diff int
 	fmt.Scanln(&diff)
 	if diff == 4 {
-		new_points = 352
-		run_cost = 12
+		newPoints = 352
+		runCost = 12
 	}
 	fmt.Print("Enter the number of seconds until the next stamina point (before pressing enter be on the difficulty select screen)- ")
-	var next_stamina_point float64
-	fmt.Scanln(&next_stamina_point)
-	runAutoBattle(device, stamina, score, next_reward, diff, next_stamina_point)
+	var nextStaminaPoint float64
+	fmt.Scanln(&nextStaminaPoint)
+	runAutoBattle(device, stamina, score, nextReward, diff, nextStaminaPoint)
 
 }
 
-func runAutoBattle(device *adb.Device, stamina int, current_score int, next_reward int, diff int, next_stamina_point float64) {
-	continue_battle := true
-	last_check_time := time.Now()
-	seconds := 300.0 - next_stamina_point
-	first_iteration := true
-	for continue_battle {
-		if current_score >= threshold_max {
-			continue_battle = false
+func runAutoBattle(device *adb.Device, stamina int, currentScore int, nextReward int, diff int, nextStaminaPoint float64) {
+	continueBattle := true
+	lastCheckTime := time.Now()
+	seconds := 300.0 - nextStaminaPoint
+	firstIteration := true
+	for continueBattle {
+		if currentScore >= thresholdMax {
+			continueBattle = false
 		}
-		if !first_iteration{
-			seconds += time.Since(last_check_time).Seconds()
-			last_check_time = time.Now()
+		if !firstIteration{
+			seconds += time.Since(lastCheckTime).Seconds()
+			lastCheckTime = time.Now()
 			if seconds >= 300 {
 				stamina += 1
 				seconds -= 300
 			}
 		}
-		first_iteration = false
-		sc := fmt.Sprintf("Current Score : %d", current_score)
+		firstIteration = false
+		sc := fmt.Sprintf("Current Score : %d", currentScore)
 		fmt.Println(sc)
 		st := fmt.Sprintf("Current Stamina : %d", stamina)
 		fmt.Println(st)
-		if stamina < run_cost {
+		if stamina < runCost {
 			refill(device, diff)
 			stamina += 99
 			wait(5)
@@ -116,29 +116,29 @@ func runAutoBattle(device *adb.Device, stamina int, current_score int, next_rewa
 		}
 		fight(device, stamina, diff)
 		fmt.Println()
-		current_score += new_points
+		currentScore += newPoints
 
-		if current_score >= next_reward {
-			old_reward := next_reward
-			if current_score >= threshold_max {
+		if currentScore >= nextReward {
+			oldReward := nextReward
+			if currentScore >= thresholdMax {
 				fmt.Println("Tempest Trials Completed")
-				continue_battle = false
-			} else if next_reward >= threshold_3 {
-				next_reward += next_reward_max
-			} else if next_reward >= threshold_2{
-				next_reward += next_reward_3
-			}else if next_reward >= threshold_1{
-				next_reward += next_reward_2
+				continueBattle = false
+			} else if nextReward >= threshold3 {
+				nextReward += nextRewardMax
+			} else if nextReward >= threshold2{
+				nextReward += nextReward3
+			}else if nextReward >= threshold1{
+				nextReward += nextReward2
 			} else {
-				next_reward += next_reward_1
+				nextReward += nextReward1
 			}
-			rew := fmt.Sprintf("Updating Reward, Next Is Available @ %d Points", next_reward)
+			rew := fmt.Sprintf("Updating Reward, Next Is Available @ %d Points", nextReward)
 			fmt.Println(rew)
-			redeem(device, old_reward)
+			redeem(device, oldReward)
 			wait(4)
 		}
 
-		stamina -= run_cost
+		stamina -= runCost
 	}
 }
 
@@ -152,7 +152,7 @@ func fight(device *adb.Device, stamina int, difficulty int) {
 	wait(4)
 	device.RunCommand(confirmDifficulty)
 	wait(10)
-	st := fmt.Sprintf("Fight Started. Current Stamina : %d", stamina-run_cost)
+	st := fmt.Sprintf("Fight Started. Current Stamina : %d", stamina-runCost)
 	fmt.Println(st)
 	device.RunCommand(openMenu)
 	wait(4)
@@ -162,8 +162,9 @@ func fight(device *adb.Device, stamina int, difficulty int) {
 
 	// Wait for battling to end, adjust as needed for your characters
 	wait(battleTimer)
-	if diff == 5 {
-		wait(.5*battleTimer)
+	if difficulty == 5 {
+		additionalTime := battleTimer/2
+		wait(additionalTime)
 	}
 
 	device.RunCommand(quitScreen)
@@ -206,5 +207,5 @@ func redeem(device *adb.Device, oldReward int) {
 }
 
 func wait(seconds int) {
-	time.Sleep(seconds * time.Second)
+	time.Sleep(time.Duration(seconds) * time.Second)
 }
