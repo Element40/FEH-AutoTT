@@ -14,9 +14,7 @@ var (
 	cli         *adb.Adb
 	run_cost    = 15
 	new_points  = 441
-
-	dif5 = "input tap 345 889"
-	dif4 = "input tap 370 1070"
+	battleTimer = 90
 
 	threshold_max = 50000
 	threshold_3 = 10000
@@ -27,6 +25,23 @@ var (
 	next_reward_3 = 1000
 	next_reward_2 = 500
 	next_reward_1 = 250
+
+	sealRewards = []int{6000, 10000, 20000}
+	characterRewards = []int{1000, 15000}
+
+	dif5 = "input tap 345 889"
+	dif4 = "input tap 370 1070"
+	confirmDifficulty = "input tap 355 870"
+	openMenu = "input tap 85 1200"
+	clickAutoBattle = "input tap 399 665"
+	confirmAutoBattle = "input tap 377 630"
+	quitScreen = "input tap 363 1117"
+	redeemNormalRewardsButton = "input tap 377 818"
+	redeemSealRewardsButton = "input tap 383 767"
+	redeemCharacterRewardsButton = "input tap 377 799"
+	restoreStamina = "input tap 376 694"
+	closeRestoredWindow = "input tap 369 740"
+
 
 )
 
@@ -96,7 +111,7 @@ func runAutoBattle(device *adb.Device, stamina int, current_score int, next_rewa
 		if stamina < run_cost {
 			refill(device, diff)
 			stamina += 99
-			time.Sleep(5 * time.Second)
+			wait(5)
 			seconds = 0.0
 		}
 		fight(device, stamina, diff)
@@ -104,6 +119,7 @@ func runAutoBattle(device *adb.Device, stamina int, current_score int, next_rewa
 		current_score += new_points
 
 		if current_score >= next_reward {
+			old_reward := next_reward
 			if current_score >= threshold_max {
 				fmt.Println("Tempest Trials Completed")
 				continue_battle = false
@@ -118,59 +134,77 @@ func runAutoBattle(device *adb.Device, stamina int, current_score int, next_rewa
 			}
 			rew := fmt.Sprintf("Updating Reward, Next Is Available @ %d Points", next_reward)
 			fmt.Println(rew)
-			redeem(device)
-			time.Sleep(4 * time.Second)
+			redeem(device, old_reward)
+			wait(4)
 		}
 
 		stamina -= run_cost
 	}
 }
 
-func fight(device *adb.Device, stamina int, diff int) {
+func fight(device *adb.Device, stamina int, difficulty int) {
 	//Difficulty selection
-	if diff == 4 {
-		device.RunCommand(dif4) // This was for Hard 4 on my device
+	if difficulty == 4 {
+		device.RunCommand(dif4)
 	} else {
-		device.RunCommand(dif5) // This was for Hard 5 on my device
+		device.RunCommand(dif5)
 	}
-	time.Sleep(4 * time.Second)                 //This tells the phone to wait an amount of milliseconds before proceeding
-	device.RunCommand("input tap 355 870") // Confirming difficult choice
-	time.Sleep(10 * time.Second)                //Longer pause, I used multiplier for each steps to fine tunes things
+	wait(4)
+	device.RunCommand(confirmDifficulty)
+	wait(10)
 	st := fmt.Sprintf("Fight Started. Current Stamina : %d", stamina-run_cost)
 	fmt.Println(st)
-	device.RunCommand("input tap 85 1200") // Menu Open
-	time.Sleep(4 * time.Second)
-	device.RunCommand("input tap 399 665") //autobattle start
-	time.Sleep(4 * time.Second)
-	device.RunCommand("input tap 377 630") //Confirm autobattle start
+	device.RunCommand(openMenu)
+	wait(4)
+	device.RunCommand(clickAutoBattle)
+	wait(4)
+	device.RunCommand(confirmAutoBattle)
 
-	time.Sleep(1 * time.Minute) //This is the time it waited for all the battle to ends
-	time.Sleep(30 * time.Second)
+	// Wait for battling to end, adjust as needed for your characters
+	wait(battleTimer)
 	if diff == 5 {
-		time.Sleep(45* time.Second) //Wait longer for
+		wait(.5*battleTimer)
 	}
 
-	device.RunCommand("input tap 363 1117")  // Click to quit from the last battle
-	time.Sleep(12 * time.Second)
-	device.RunCommand("input tap 363 1117") // Quitting from score screen
-	time.Sleep(6 * time.Second)
+	device.RunCommand(quitScreen)
+	wait(12)
+	device.RunCommand(quitScreen)
+	wait(6)
 }
 
 func refill(device *adb.Device, diff int) {
 	if diff == 4 {
-		device.RunCommand(dif4) // This was for Hard 5 on my device
+		device.RunCommand(dif4)
 	} else {
-		device.RunCommand(dif5) // This was for Hard 5 on my device
+		device.RunCommand(dif5)
 	}
-	time.Sleep(4 * time.Second)                 //This tells the phone to wait an amount of milliseconds before proceeding
-	device.RunCommand("input tap 355 870") // Confirming difficult choice
-	time.Sleep(4 * time.Second)                 //This tells the phone to wait an amount of milliseconds before proceeding
-	device.RunCommand("input tap 376 694") // Click Restore
-	time.Sleep(8 * time.Second)                 //This tells the phone to wait an amount of milliseconds before proceeding
-	device.RunCommand("input tap 369 740") //Close Window
+	wait(4)
+	device.RunCommand(confirmDifficulty)
+	wait(4)
+	device.RunCommand(restoreStamina)
+	wait(8)
+	device.RunCommand(closeRestoredWindow)
 }
 
-func redeem(device *adb.Device) {
-	device.RunCommand("input tap 377 818") // Redeem
-	time.Sleep(4 * time.Second)                 //This tells the phone to wait an amount of milliseconds before proceeding
+func redeem(device *adb.Device, oldReward int) {
+	for _, element := range sealRewards {
+		if element == oldReward {
+			device.RunCommand(redeemSealRewardsButton)
+			wait(4)
+			return
+		}
+	}
+	for _, element := range characterRewards {
+		if element == oldReward {
+			device.RunCommand(redeemCharacterRewardsButton)
+			wait(4)
+			return
+		}
+	}
+	device.RunCommand(redeemNormalRewardsButton)
+	wait(4)
+}
+
+func wait(seconds int) {
+	time.Sleep(seconds * time.Second)
 }
