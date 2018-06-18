@@ -28,6 +28,7 @@ var (
 
 	sealRewards = []int{6000, 10000, 20000}
 	characterRewards = []int{1000, 15000}
+	blessingReward = 12500
 
 	dif5 = "input tap 345 889"
 	dif4 = "input tap 370 1070"
@@ -38,7 +39,8 @@ var (
 	quitScreen = "input tap 363 1117"
 	redeemNormalRewardsButton = "input tap 377 818"
 	redeemSealRewardsButton = "input tap 383 767"
-	redeemCharacterRewardsButton = "input tap 377 799"
+	redeemCharacterRewardsButton = "input tap 362 783"
+	redeemBlessingRewardsButton = "input tap 377 799"
 	restoreStamina = "input tap 376 694"
 	closeRestoredWindow = "input tap 369 740"
 
@@ -201,6 +203,11 @@ func redeem(device *adb.Device, oldReward int) {
 			wait(4)
 			return
 		}
+	}
+	if blessingReward == oldReward {
+		device.RunCommand(redeemBlessingRewardsButton)
+		wait(4)
+		return
 	}
 	device.RunCommand(redeemNormalRewardsButton)
 	wait(4)
